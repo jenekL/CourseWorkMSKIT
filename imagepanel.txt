@@ -1,0 +1,182 @@
+package panel;
+
+import panel.image.ImageWrapper;
+
+import javax.imageio.ImageIO;
+import javax.imageio.stream.ImageInputStream;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+
+public class ImagePanel extends JPanel {
+
+    public ImagePanel() {
+
+        this.addComponentListener(new ComponentAdapter() {
+            //перерисовывает картинку в случае изменени€ размеров фрейма...
+            @Override
+            public void componentResized(ComponentEvent ce) {
+                repaint();
+            }
+        });
+
+        //добавл€ем обработчик событий который слушает колЄсико мышки, ну и измен€ет размер картинки
+        this.addMouseWheelListener(e -> {
+            if (e.getWheelRotation() == 1) {
+                changebleImage.setZoom(changebleImage.getZoom() + 0.1);
+            } else {
+                changebleImage.setZoom(changebleImage.getZoom() - 0.1);
+            }
+            repaint();
+        });
+
+        this.addMouseListener(new MouseAdapter() {
+            //записываем первую точку где кликаетс€ мышкой и начинаетс€ Drag&Dpop
+            @Override
+            public void mousePressed(MouseEvent e) {
+                press = e.getPoint();
+                pressedBtn = true;
+            }
+
+            //“ут просто быдло кодинг...
+            //ћетод берет параметры выделеного пр€моугольника и перерисовывает тлько выделеную часть картнки
+            //“.к. картинка может мен€ть свои размеры(когда крутишь колесико), то выделеные координаты не соответсвуют
+            //координатам картинки. ѕотому мы делим на zoom
+            //Ѕлоки if...else - если бы их не было, тогда когда пр€моугольник был больше отрисованной картинки,
+            //то отрисовывалась уже удаленна€ часть картинки. ¬ общем не знаю как обь€снить, удали их сам поймешь.
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                pressedBtn = false;
+                if ((int) rect.getWidth() != 0 && (int) rect.getHeight() != 0) {
+                    //newXImg += rect.getX() / zoom;
+                    changebleImage.setxImg((int) (changebleImage.getxImg() + rect.getX() / changebleImage.getZoom()));
+                    changebleImage.setyImg((int) (changebleImage.getyImg() + rect.getY() / changebleImage.getZoom()));
+                    //newYImg += rect.getY() / zoom;
+                    if ((rect.getX() + rect.getWidth()) <= changebleImage.getwImg()) {
+                        changebleImage.setwImg((int) (rect.getWidth() / changebleImage.getZoom()));
+                        //newWImg = (int) (rect.getWidth() / zoom);
+                    } else {
+                        changebleImage.setwImg((int) ((changebleImage.getwImg() - (int) rect.getX()) / changebleImage.getZoom()));
+                        //newWImg = (int)((wImg - (int)rect.getX()) / zoom);
+                    }
+                    if ((rect.getY() + rect.getHeight()) <= changebleImage.gethImg()) {
+                        changebleImage.sethImg((int) (rect.getHeight() / changebleImage.getZoom()));
+                        //newHImg = (int) (rect.getHeight() / zoom);
+                    } else {
+                        changebleImage.sethImg((int) ((changebleImage.gethImg() - (int) rect.getY()) / changebleImage.getZoom()));
+                        //newHImg = (int)((hImg - (int)rect.getY()) / zoom);
+                    }
+                    changebleImage.setZoom(1);
+                    repaint();
+                }
+            }
+        });
+
+        this.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            //ќтрисовываем пр€моугольник, который показывает что выдел€етс€.
+            public void mouseDragged(MouseEvent e) {
+                double x, y, w, h;
+
+                if (e.getX() > (int) press.getX()) {
+                    x = press.getX();
+                    w = (double) e.getX() - press.getX();
+                } else {
+                    x = (double) e.getX();
+                    w = press.getX() - (double) e.getX();
+                }
+
+                if (e.getY() > (int) press.getY()) {
+                    y = press.getY();
+                    h = (double) e.getY() - press.getY();
+                } else {
+                    y = (double) e.getY();
+                    h = press.getY() - (double) e.getY();
+                }
+                setRect(new Rectangle2D.Double(x, y, w, h));
+            }
+        });
+    }
+
+    public void setRect(Rectangle2D rect) {
+        this.rect = rect;
+        repaint();
+    }
+
+    @Override
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        Graphics2D g2 = (Graphics2D) g;
+        if (defaultImage != null) {
+            g2.drawImage(defaultImage.getImage(), 0, 0,
+                    (int) (defaultImage.getwImg() * defaultImage.getZoom()),
+                    (int) (defaultImage.gethImg() * defaultImage.getZoom()),
+                    defaultImage.getxImg(), defaultImage.gethImg(),
+                    defaultImage.getxImg() + defaultImage.getwImg(),
+                    defaultImage.getyImg() + defaultImage.gethImg(),
+                    null);
+
+            g2.drawImage(changebleImage.getImage(), 0, 0,
+                    (int) (changebleImage.getwImg() * changebleImage.getZoom()),
+                    (int) (changebleImage.gethImg() * changebleImage.getZoom()),
+                    changebleImage.getxImg(), changebleImage.gethImg(),
+                    changebleImage.getxImg() + changebleImage.getwImg(),
+                    changebleImage.getyImg() + changebleImage.gethImg(),
+                    null);
+            if (pressedBtn) {
+                g2.draw(rect);
+            }
+        }
+
+        //for pixels without BufferedImage
+//        if (pixels != null) {
+//            for (int i = 0; i < hImg; i++) {
+//                for (int j = 0; j < wImg; j++) {
+//                    g2.setColor(new Color(pixels[i][j]));
+//                    g2.drawLine((int)(j * zoom), (int)(i * zoom), (int)(j * zoom), (int)(i * zoom));
+//                }
+//            }
+//            if (pressedBtn) {
+//                g2.draw(rect);
+//            }
+//        }
+    }
+
+//    public void setImage(String path) {
+//        try {
+//            changebleImage = ImageIO.read(new File(path));
+//            zoom = 1;
+//            xImg = 0;
+//            yImg = 0;
+//            wImg = defaultimg.getWidth(ImagePanel.this);
+//            hImg = defaultimg.getHeight(ImagePanel.this);
+//            repaint();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
+
+    public void setPixels(int[][] pixels, int W, int H) {
+
+        defaultImage = new ImageWrapper(pixels, W, H);
+        changebleImage = new ImageWrapper(defaultImage);
+
+        repaint();
+    }
+
+    private int newXImg, newYImg, newWImg, newHImg;
+    private int xImg, yImg, wImg, hImg; // переменные в которых хран€тс€ координаты части картинки которую над показывать.
+    // при чем wImg, hImg - это не длина части картинки которую над показать,
+    // а координата второго угла пр€моугольника.
+    private Rectangle2D rect = new Rectangle2D.Double();
+    private static ImageWrapper defaultImage = null;
+    private static ImageWrapper changebleImage = null;
+    private Point2D press = new Point2D.Double(0, 0);
+    private boolean pressedBtn = false;
+}
