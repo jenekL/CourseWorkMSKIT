@@ -25,15 +25,14 @@ public class MirrorFilter {
     }
 
     public static int[][] fromArrayToArray(int[][] pixels, int H, int W) {
-        int[][] pxls = pixels;
         for (int i = 0; i < H; i++) {
             for (int j = 0; j < W; j++) {
-                int tmp = pxls[i][W - 1 - j];
-                pxls[i][W - 1 - j] = pxls[i][j];
-                pxls[i][j] = tmp;
+                int tmp = pixels[i][W - 1 - j];
+                pixels[i][W - 1 - j] = pixels[i][j];
+                pixels[i][j] = tmp;
             }
         }
-        return pxls;
+        return pixels;
     }
 
 }

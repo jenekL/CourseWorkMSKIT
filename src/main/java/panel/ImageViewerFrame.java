@@ -1,5 +1,6 @@
 package panel;
 
+import bmp.BMPWriter;
 import imageFilters.MirrorFilter;
 import tga.TGADecoder;
 import util.ConvertByteBufferToPixelsArray;
@@ -9,6 +10,7 @@ import java.awt.event.*;
 import java.io.*;
 import java.nio.ByteBuffer;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 
 class ImageViewerFrame extends JFrame {
@@ -29,14 +31,18 @@ class ImageViewerFrame extends JFrame {
         JMenuBar menuBar = new JMenuBar();
         setJMenuBar(menuBar);
 
-        JMenu menu = new JMenu("File");
+        JMenu menu = new JMenu("Файл");
         menuBar.add(menu);
 
-        JMenuItem openItem = new JMenuItem("Open");
+        JMenuItem openItem = new JMenuItem("Открыть");
         menu.add(openItem);
 
         openItem.addActionListener(e -> {
             chooser.setCurrentDirectory(new File("."));
+            FileNameExtensionFilter filter = new FileNameExtensionFilter(
+                    "TGA images", "tga");
+            chooser.setFileFilter(filter);
+
             int result = chooser.showOpenDialog(ImageViewerFrame.this);
 
             if (result == JFileChooser.APPROVE_OPTION) {
@@ -61,26 +67,58 @@ class ImageViewerFrame extends JFrame {
 
         });
 
+        JMenuItem saveItem = new JMenuItem("Сохранить");
+        menu.add(saveItem);
+
+        saveItem.addActionListener(e->{
+            if(pixels == null){
+                JOptionPane.showMessageDialog(ImageViewerFrame.this,
+                        "Нечего сохранять");
+            }
+            else {
+                chooser.setCurrentDirectory(new File("."));
+                chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+                FileNameExtensionFilter filter = new FileNameExtensionFilter(
+                        "BMP images", "bmp");
+                chooser.setFileFilter(filter);
+
+                int result = chooser.showSaveDialog(ImageViewerFrame.this);
+
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    BMPWriter.save(pixels, chooser.getSelectedFile().getPath() + ".bmp");
+                }
+            }
+
+        });
+
         panel = new ImagePanel();
         this.add(panel);
 
-        JMenuItem exitItem = new JMenuItem("Exit");
+        JMenuItem exitItem = new JMenuItem("Закрыть");
         menu.add(exitItem);
         exitItem.addActionListener(event -> System.exit(0));
 
+        JMenu filterMenu = new JMenu("Фильтры");
+        menuBar.add(filterMenu);
+
         JMenuItem mirrorButton = new JMenuItem("Отзеркалить");
         mirrorButton.addActionListener(e->{
-            panel.setPixels(MirrorFilter.fromArrayToArray(pixels, tgaDecoder.getHeight(), tgaDecoder.getWidth()),
-                    tgaDecoder.getWidth(), tgaDecoder.getHeight());
-            panel.repaint();
+            if(pixels == null){
+                JOptionPane.showMessageDialog(ImageViewerFrame.this,
+                        "Нечего отзеркаливать");
+            }
+            else {
+                panel.setPixels(MirrorFilter.fromArrayToArray(pixels, tgaDecoder.getHeight(), tgaDecoder.getWidth()),
+                        tgaDecoder.getWidth(), tgaDecoder.getHeight());
+                panel.repaint();
+            }
         });
-        menuBar.add(mirrorButton);
+        filterMenu.add(mirrorButton);
 
 
     }
 
     private JLabel label;
-    //добавление экземпляра ImagePanel
     private ImagePanel panel;
     private JFileChooser chooser;
     private static final int DEFAULT_WIDTH = 300;
